@@ -1,4 +1,5 @@
 from typing import List, Tuple
+
 class Piece:
     """
     Базовый класс для всех фигур.
@@ -117,7 +118,7 @@ class Rook(Piece):
         return moves
         
         
-class Knight():
+class Knight(Piece):
     """Конь"""
     def get_legal_moves(self, board):
         moves = []
@@ -139,7 +140,31 @@ class Knight():
                     moves.append((r, c))
         
         return moves
+    
+    
+class Bishop(Piece):
+    """Слон"""
+    def get_legal_moves(self, board):
+        moves = []
+        row, col = self.position
+        directions_diagonal = [(1,1), (1,-1), (-1,1), (-1,-1)]
 
-        
+        for drow, dcol in directions_diagonal:
+            r, c = row, col
+            while True:
+                r += drow
+                c += dcol
+                if not board.in_bounds((r, c)):
+                    break
+                target_piece = board.get_piece((r, c))
+                if target_piece is None:
+                    moves.append((r, c))
+                else:
+                    if target_piece.color != self.color:
+                        moves.append((r, c))
+                    break
+
+        return moves
+    
         
 pawn = Pawn('white',(1,1))

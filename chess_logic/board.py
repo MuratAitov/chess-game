@@ -75,14 +75,84 @@ class Board:
         return True
     
     def is_square_attacked(self, position: Tuple[int, int], by_color: str) -> bool:
-        for row in range(8):
-            for col in range(8):
-                p = self.grid[row][col]
-                if p is not None and p.color == by_color:
-                    if position in p.get_legal_moves(self):
+        row, col= position 
+        
+        # for pawn 
+        if by_color == 'white':
+            for attack_col in (col - 1, col + 1):
+                if self.in_bounds((row - 1, attack_col)):
+                    piece = self.grid[row - 1][attack_col]
+                    if piece is not None and piece.color == 'white' and piece.__class__.__name__ == 'Pawn':
                         return True
-        return False
+        else:
+            for attack_col in (col - 1, col + 1):
+                if self.in_bounds((row + 1, attack_col)):
+                    piece = self.grid[row + 1][attack_col]
+                    if piece is not None and piece.color == 'black' and piece.__class__.__name__ == 'Pawn':
+                        return True
     
+        # for knight 
+        knight_moves = [
+        (row + 2, col + 1),
+        (row + 2, col - 1),
+        (row - 2, col + 1),
+        (row - 2, col - 1),
+        (row + 1, col + 2),
+        (row + 1, col - 2),
+        (row - 1, col + 2),
+        (row - 1, col - 2),
+        ]
+        
+        for r, c in knight_moves:
+            if self.in_bounds((r, c)):
+                piece = self.grid[r][c]
+                if piece is not None and piece.color == by_color and piece.__class__.__name__ == 'Knight':
+                    return True
+
+        # for king 
+        for drow in [-1, 0, 1]:
+            for dcol in [-1, 0, 1]:
+                if drow == 0 and dcol == 0:
+                    continue
+                r = row + drow
+                c = col + dcol
+                if self.in_bounds((r, c)):
+                    piece = self.grid[r][c]
+                    if piece is not None and piece.color == by_color and piece.__class__.__name__ == 'King':
+                        return True
+                    
+        # for bishop / queen 
+        directions_diagonal = [(1,1), (1,-1), (-1,1), (-1,-1)]
+        for drow, dcol in directions_diagonal:
+            r, c = row, col
+            while True:
+                r += drow
+                c += dcol
+                if not self.in_bounds((r,c)):
+                    break
+                piece = self.grid[r][c]
+                if piece is not None:
+                    if piece.color == by_color and piece.__class__.__name__ in ('Bishop', 'Queen'):
+                        return True
+                    break
+
+        # for rook / queen 
+        directions_line = [(1,0), (-1,0), (0,1), (0,-1)]
+        for drow, dcol in directions_line:
+            r, c = row, col
+            while True:
+                r += drow
+                c += dcol
+                if not self.in_bounds((r,c)):
+                    break
+                piece = self.grid[r][c]
+                if piece is not None:
+                    if piece.color == by_color and piece.__class__.__name__ in ('Rook', 'Queen'):
+                        return True
+                    break
+
+        return False
+            
     def highlight_moves(self, piece: Piece) -> str:
         moves = piece.get_legal_moves(self)
         moves_set = set(moves) 
