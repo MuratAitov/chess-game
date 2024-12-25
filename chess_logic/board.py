@@ -1,8 +1,11 @@
 # chess_logic/board.py
 
 from typing import Optional, Tuple
-from pieces import Piece, Pawn, Rook
-# , Knight, Bishop, Queen, King
+try:
+    from pieces import Piece, Pawn, Rook, Knight, Bishop
+except ImportError:
+    from chess_logic.pieces import Piece, Pawn, Rook, Knight, Bishop
+#, Queen, King
 
 class Board:
     def __init__(self):
@@ -20,17 +23,17 @@ class Board:
         self.grid[0][0] = Rook('black', (0, 0))
         self.grid[0][7] = Rook('black', (0, 7))
         
-        # # Кони
-        # self.grid[7][1] = Knight('white', (7, 1))
-        # self.grid[7][6] = Knight('white', (7, 6))
-        # self.grid[0][1] = Knight('black', (0, 1))
-        # self.grid[0][6] = Knight('black', (0, 6))
+        # Кони
+        self.grid[7][1] = Knight('white', (7, 1))
+        self.grid[7][6] = Knight('white', (7, 6))
+        self.grid[0][1] = Knight('black', (0, 1))
+        self.grid[0][6] = Knight('black', (0, 6))
         
-        # # Слоны
-        # self.grid[7][2] = Bishop('white', (7, 2))
-        # self.grid[7][5] = Bishop('white', (7, 5))
-        # self.grid[0][2] = Bishop('black', (0, 2))
-        # self.grid[0][5] = Bishop('black', (0, 5))
+        # Слоны
+        self.grid[7][2] = Bishop('white', (7, 2))
+        self.grid[7][5] = Bishop('white', (7, 5))
+        self.grid[0][2] = Bishop('black', (0, 2))
+        self.grid[0][5] = Bishop('black', (0, 5))
         
         # # Ферзи
         # self.grid[7][3] = Queen('white', (7, 3))
