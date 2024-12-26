@@ -166,5 +166,31 @@ class Bishop(Piece):
 
         return moves
     
+class Queen(Piece): 
+    """Ферзь"""
+    def get_legal_moves(self, board):
+        moves = [] 
+        row, col = self.position
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1), (1,1), (1,-1), (-1,1), (-1,-1)]
+        for drow, dcol in directions:
+            r, c = row, col
+            while True: 
+                r += drow 
+                c += dcol
+                if not board.in_bounds((r,c)): 
+                    break 
+                target_piece = board.get_piece((r,c))
+                if target_piece is None: 
+                    moves.append((r,c))
+                else: 
+                    if target_piece.color != self.color:
+                        moves.append((r, c))
+                    break
+        return moves
+
+class King(Piece):
+    """Король"""
+    def get_legal_moves(self, board):
+        return super().get_legal_moves(board)
         
 pawn = Pawn('white',(1,1))
