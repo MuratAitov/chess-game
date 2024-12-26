@@ -2,10 +2,10 @@
 
 from typing import Optional, Tuple
 try:
-    from pieces import Piece, Pawn, Rook, Knight, Bishop
+    from pieces import Piece, Pawn, Rook, Knight, Bishop, Queen, King
 except ImportError:
-    from chess_logic.pieces import Piece, Pawn, Rook, Knight, Bishop
-#, Queen, King
+    from chess_logic.pieces import Piece, Pawn, Rook, Knight, Bishop, Queen, King
+
 
 class Board:
     def __init__(self):

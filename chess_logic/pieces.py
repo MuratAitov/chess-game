@@ -191,6 +191,27 @@ class Queen(Piece):
 class King(Piece):
     """Король"""
     def get_legal_moves(self, board):
-        return super().get_legal_moves(board)
+        moves = []
+        row, col = self.position
         
+        king_steps = [
+            (row - 1, col - 1),
+            (row - 1, col),
+            (row - 1, col + 1),
+            (row, col - 1),
+            (row, col + 1),
+            (row + 1, col - 1),
+            (row + 1, col),
+            (row + 1, col + 1),
+        ]
+        
+        for (r, c) in king_steps:
+            if board.in_bounds((r, c)):
+                target_piece = board.get_piece((r, c))
+                if target_piece is None or target_piece.color != self.color:
+                    moves.append((r, c))
+        
+        return moves
+    
+    
 pawn = Pawn('white',(1,1))

@@ -11,7 +11,7 @@ sys.path.append(str(project_root))
 print("Project Root Path:", project_root)
 
 from chess_logic.board import Board
-from chess_logic.pieces import Pawn, Rook, Knight, Bishop
+from chess_logic.pieces import Pawn, Rook, Knight, Bishop, Queen, King
 
 class TestIsSquareAttacked:
     """ Тесты для метода is_square_attacked() """
@@ -115,23 +115,23 @@ class TestIsSquareAttacked:
         attacked = self.board.is_square_attacked((1, 4), 'black')
         assert attacked is True
 
-    # # 12
-    # def test_king_attacks_adjacent(self):
-    #     """
-    #     Король на (4,4) атакует все 8 соседних клеток, проверим одну из них (3,3).
-    #     """
-    #     self.board.grid[4][4] = King('white', (4, 4))
-    #     attacked = self.board.is_square_attacked((3, 3), 'white')
-    #     assert attacked is True
+    # 12
+    def test_king_attacks_adjacent(self):
+        """
+        Король на (4,4) атакует все 8 соседних клеток, проверим одну из них (3,3).
+        """
+        self.board.grid[4][4] = King('white', (4, 4))
+        attacked = self.board.is_square_attacked((3, 3), 'white')
+        assert attacked is True
 
-    # # 13
-    # def test_king_does_not_attack_two_away(self):
-    #     """
-    #     Король на (4,4) НЕ атакует (2,4).
-    #     """
-    #     self.board.grid[4][4] = King('white', (4, 4))
-    #     attacked = self.board.is_square_attacked((2, 4), 'white')
-    #     assert attacked is False
+    # 13
+    def test_king_does_not_attack_two_away(self):
+        """
+        Король на (4,4) НЕ атакует (2,4).
+        """
+        self.board.grid[4][4] = King('white', (4, 4))
+        attacked = self.board.is_square_attacked((2, 4), 'white')
+        assert attacked is False
 
     # 14
     def test_bishop_attacks_diagonal(self):
@@ -153,23 +153,23 @@ class TestIsSquareAttacked:
         attacked = self.board.is_square_attacked((6, 6), 'white')
         assert attacked is False
 
-    # # 16
-    # def test_queen_attacks_diagonal(self):
-    #     """
-    #     Ферзь на (4,4) атакует (7,7) по диагонали
-    #     """
-    #     self.board.grid[4][4] = Queen('black', (4, 4))
-    #     attacked = self.board.is_square_attacked((7, 7), 'black')
-    #     assert attacked is True
+    # 16
+    def test_queen_attacks_diagonal(self):
+        """
+        Ферзь на (4,4) атакует (7,7) по диагонали
+        """
+        self.board.grid[4][4] = Queen('black', (4, 4))
+        attacked = self.board.is_square_attacked((7, 7), 'black')
+        assert attacked is True
 
-    # # 17
-    # def test_queen_attacks_straight(self):
-    #     """
-    #     Ферзь на (4,4) атакует (4,0) по горизонтали
-    #     """
-    #     self.board.grid[4][4] = Queen('black', (4, 4))
-    #     attacked = self.board.is_square_attacked((4, 0), 'black')
-    #     assert attacked is True
+    # 17
+    def test_queen_attacks_straight(self):
+        """
+        Ферзь на (4,4) атакует (4,0) по горизонтали
+        """
+        self.board.grid[4][4] = Queen('black', (4, 4))
+        attacked = self.board.is_square_attacked((4, 0), 'black')
+        assert attacked is True
 
     # 18
     def test_position_out_of_bounds_returns_false(self):
