@@ -14,34 +14,34 @@ class Board:
     def setup_initial_position(self):
         # Пешки
         for col in range(8):
-            self.grid[6][col] = Pawn('white', (6, col))
-            self.grid[1][col] = Pawn('black', (1, col))
+            self.grid[6][col] = Pawn('black', (6, col))
+            self.grid[1][col] = Pawn('white', (1, col))
         
         # Ладьи
-        self.grid[7][0] = Rook('white', (7, 0))
-        self.grid[7][7] = Rook('white', (7, 7))
-        self.grid[0][0] = Rook('black', (0, 0))
-        self.grid[0][7] = Rook('black', (0, 7))
+        self.grid[7][0] = Rook('black', (7, 0))
+        self.grid[7][7] = Rook('black', (7, 7))
+        self.grid[0][0] = Rook('white', (0, 0))
+        self.grid[0][7] = Rook('white', (0, 7))
         
         # Кони
-        self.grid[7][1] = Knight('white', (7, 1))
-        self.grid[7][6] = Knight('white', (7, 6))
-        self.grid[0][1] = Knight('black', (0, 1))
-        self.grid[0][6] = Knight('black', (0, 6))
+        self.grid[7][1] = Knight('black', (7, 1))
+        self.grid[7][6] = Knight('black', (7, 6))
+        self.grid[0][1] = Knight('white', (0, 1))
+        self.grid[0][6] = Knight('white', (0, 6))
         
         # Слоны
-        self.grid[7][2] = Bishop('white', (7, 2))
-        self.grid[7][5] = Bishop('white', (7, 5))
-        self.grid[0][2] = Bishop('black', (0, 2))
-        self.grid[0][5] = Bishop('black', (0, 5))
+        self.grid[7][2] = Bishop('black', (7, 2))
+        self.grid[7][5] = Bishop('black', (7, 5))
+        self.grid[0][2] = Bishop('white', (0, 2))
+        self.grid[0][5] = Bishop('white', (0, 5))
         
         # Ферзи
-        self.grid[7][3] = Queen('white', (7, 3))
-        self.grid[0][3] = Queen('black', (0, 3))
+        self.grid[7][3] = Queen('black', (7, 3))
+        self.grid[0][3] = Queen('white', (0, 3))
         
         # Короли
-        self.grid[7][4] = King('white', (7, 4))
-        self.grid[0][4] = King('black', (0, 4))
+        self.grid[7][4] = King('black', (7, 4))
+        self.grid[0][4] = King('white', (0, 4))
     
     def place_test_pieces(self, piece: Piece, position: Tuple[int, int]):
         """
