@@ -190,7 +190,7 @@ class Board:
         lines.append("  a b c d e f g h")
         return "\n".join(lines)
     
-    
-board = Board()
-board.place_test_pieces()
-print(board.highlight_moves(Rook('white', (0, 0))))
+if __name__ == '__main__':
+    board = Board()
+    board.place_test_pieces()
+    print(board.highlight_moves(Rook('white', (0, 0))))
