@@ -54,13 +54,14 @@ class Piece:
         например, ♔ или ♟ (если хотим).
         """
         return self.get_unicode_symbol()
-
     def __repr__(self):
         """
-        Репрезентация в отладочном выводе. Можно вернуть 
-        тот же юникод-символ или более детальную инфу.
+        Репрезентация в отладочном выводе. Возвращает строку вида 'wP' или 'bK',
+        которая используется как ключ для доступа к изображениям фигур.
         """
-        return f"{self.get_unicode_symbol()}({self.position})"
+        color_prefix = 'w' if self.color == 'white' else 'b'
+        piece_type = 'N' if self.__class__.__name__ == 'Knight' else self.__class__.__name__[0]
+        return f"{color_prefix}{piece_type}"
 
 
 class Pawn(Piece):
