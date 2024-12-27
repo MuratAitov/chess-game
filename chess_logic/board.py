@@ -35,26 +35,26 @@ class Board:
         self.grid[0][2] = Bishop('black', (0, 2))
         self.grid[0][5] = Bishop('black', (0, 5))
         
-        # # Ферзи
-        # self.grid[7][3] = Queen('white', (7, 3))
-        # self.grid[0][3] = Queen('black', (0, 3))
+        # Ферзи
+        self.grid[7][3] = Queen('white', (7, 3))
+        self.grid[0][3] = Queen('black', (0, 3))
         
-        # # Короли
-        # self.grid[7][4] = King('white', (7, 4))
-        # self.grid[0][4] = King('black', (0, 4))
+        # Короли
+        self.grid[7][4] = King('white', (7, 4))
+        self.grid[0][4] = King('black', (0, 4))
     
-    def place_test_pieces(self):
+    def place_test_pieces(self, piece: Piece, position: Tuple[int, int]):
         """
-        ставим несколько фигур в произвольных позициях.
-        """
-        for r in range(8):
-            for c in range(8):
-                self.grid[r][c] = None
+        Ставит указанную фигуру на заданные координаты.
         
-        self.grid[0][0] = Rook('white', (0, 0))
-        self.grid[3][0] = Pawn('black', (3, 0))
-        # self.grid[4][4] = King('white', (4, 4))
-        # self.grid[2][2] = Bishop('black', (2, 2))
+        Args:
+            piece (Piece): Фигура для размещения
+            position (Tuple[int, int]): Координаты (строка, столбец)
+        """
+        row, col = position
+        if self.in_bounds(position):
+            self.grid[row][col] = piece
+            piece.position = position
     
     def in_bounds(self, pos: Tuple[int, int]) -> bool:
         row, col = pos
@@ -155,6 +155,139 @@ class Board:
                     break
 
         return False
+    
+    
+    def is_in_check(self, color: str) -> bool:
+        """
+        Проверяет, находится ли король указанного цвета под шахом.
+        
+        Args:
+            color (str): цвет короля ('white' или 'black')
+            
+        Returns:
+            bool: True если король под шахом, False в противном случае
+        """
+        # Найдем позицию короля указанного цвета
+        king_pos = None
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece((row, col))
+                if (piece and 
+                    piece.__class__.__name__ == 'King' and 
+                    piece.color == color):
+                    king_pos = (row, col)
+                    break
+            if king_pos:
+                break
+        
+        if not king_pos:
+            return False  # Король не найден (не должно случиться в нормальной игре)
+        
+        # Проверим, может ли какая-либо фигура противника атаковать короля
+        opponent_color = 'black' if color == 'white' else 'white'
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece((row, col))
+                if piece and piece.color == opponent_color:
+                    # Получаем все возможные ходы фигуры
+                    legal_moves = piece.get_legal_moves(self)
+                    # Если позиция короля в списке возможных ходов - это шах
+                    if king_pos in legal_moves:
+                        return True
+                
+        return False
+
+    def is_checkmate(self, color: str) -> bool:
+        """
+        Проверяет, находится ли указанный цвет в положении мата.
+        
+        Args:
+            color (str): цвет игрока ('white' или 'black')
+            
+        Returns:
+            bool: True если это мат, False в противном случае
+        """
+        # Если нет шаха, то нет и мата
+        if not self.is_in_check(color):
+            return False
+        
+        # Проверяем все фигуры указанного цвета
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece((row, col))
+                if piece and piece.color == color:
+                    # Получаем все возможные ходы фигуры
+                    legal_moves = piece.get_legal_moves(self)
+                    
+                    # Проверяем каждый возможный ход
+                    for move in legal_moves:
+                        # Сохраняем текущее состояние
+                        captured_piece = self.get_piece(move)
+                        old_pos = piece.position
+                        
+                        # Пробуем сделать ход
+                        self._move_piece(piece, move)
+                        
+                        # Проверяем, остается ли король под шахом
+                        still_in_check = self.is_in_check(color)
+                        
+                        # Возвращаем всё как было
+                        self._move_piece(piece, old_pos)
+                        if captured_piece:
+                            self.pieces[move] = captured_piece
+                        
+                        # Если нашелся ход, спасающий от шаха - это не мат
+                        if not still_in_check:
+                            return False
+                            
+        # Если не нашлось ходов, спасающих от шаха - это мат
+        return True
+
+    def is_stalemate(self, color: str) -> bool:
+        """
+        Проверяет, находится ли указанный цвет в положении пата.
+        
+        Args:
+            color (str): цвет игрока ('white' или 'black')
+            
+        Returns:
+            bool: True если это пат, False в противном случае
+        """
+        # Если есть шах, то это не пат
+        if self.is_in_check(color):
+            return False
+        
+        # Проверяем, есть ли хоть один легальный ход
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece((row, col))
+                if piece and piece.color == color:
+                    legal_moves = piece.get_legal_moves(self)
+                    
+                    # Проверяем каждый возможный ход
+                    for move in legal_moves:
+                        # Сохраняем текущее состояние
+                        captured_piece = self.get_piece(move)
+                        old_pos = piece.position
+                        
+                        # Пробуем сделать ход
+                        self._move_piece(piece, move)
+                        
+                        # Проверяем, не подставляет ли ход короля под шах
+                        legal_move = not self.is_in_check(color)
+                        
+                        # Возвращаем всё как было
+                        self._move_piece(piece, old_pos)
+                        if captured_piece:
+                            self.pieces[move] = captured_piece
+                        
+                        # Если нашелся хотя бы один легальный ход - это не пат
+                        if legal_move:
+                            return False
+                            
+        # Если не нашлось ни одного легального хода - это пат
+        return True
+    
             
     def highlight_moves(self, piece: Piece) -> str:
         moves = piece.get_legal_moves(self)
