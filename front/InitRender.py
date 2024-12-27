@@ -23,7 +23,7 @@ def rendering():
     global board
     screen.fill((255, 255, 255))
     # главное поле
-    Main_field = pygame.image.load('images/doska.jpg')
+    Main_field = pygame.image.load('images/boards/blue.png')
     Main_field = pygame.transform.scale(Main_field, (700, 700))
     Main_field_rect = Main_field.get_rect(bottomright=(700, 700))
     screen.blit(Main_field, Main_field_rect)
@@ -32,7 +32,7 @@ def rendering():
     for alpha in range(8):
         for num in range(8):
             if board.grid[alpha][num]:
-                image = assets[str(board.grid[alpha][num])]
+                image = 'images/pieces/classic/' + repr(board.grid[alpha][num]) + '.svg'
                 piece_image = pygame.image.load(image)
                 piece_image = pygame.transform.scale(piece_image, (76, 76))
                 piece_image_rect = piece_image.get_rect(bottomleft=(((num - 1) * 76 + 51, 120), 662 - (alpha - 1) * 76))
