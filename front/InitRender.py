@@ -18,7 +18,7 @@ chosen_piece = ''
 points_pos = []
 
 
-def rendering(assets):
+def rendering():
     global screen
     global board
     screen.fill((255, 255, 255))
@@ -29,25 +29,24 @@ def rendering(assets):
     screen.blit(Main_field, Main_field_rect)
 
     # отрисовка фигур
-    for i in range(8):
-        for j in range(8):
-            if board.grid[i][j]:
-                image = assets[str(board.grid[i][j])]
-                piece_image = pygame.image.load('../../images/Start_monopoly_image.webp')
+    for alpha in range(8):
+        for num in range(8):
+            if board.grid[alpha][num]:
+                image = assets[str(board.grid[alpha][num])]
+                piece_image = pygame.image.load(image)
                 piece_image = pygame.transform.scale(piece_image, (76, 76))
-                piece_image_rect = piece_image.get_rect(bottomleft=(((j - 1) * 76 + 51, 120), 662 - (i - 1) * 76))
+                piece_image_rect = piece_image.get_rect(bottomleft=(((num - 1) * 76 + 51, 120), 662 - (alpha - 1) * 76))
                 screen.blit(piece_image, piece_image_rect)
     pygame.display.update()
 
 
-def init():
-    global screen
-    global board
-    pygame.init()
+pygame.init()
+screen = pygame.display.set_mode(start_size)
+screen.fill((255, 255, 255))
+pygame.display.set_caption("chess")
+board = Board()
+board.setup_initial_position()
+rendering()
 
-    screen = pygame.display.set_mode(start_size)
-    screen.fill((255, 255, 255))
-    pygame.display.set_caption("chess")
-    board = Board()
-    board.setup_initial_position()
-    rendering(assets)
+if __name__ == '__main__':
+    pass
