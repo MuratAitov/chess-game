@@ -83,14 +83,14 @@ class Board:
         # for pawn 
         if by_color == 'white':
             for attack_col in (col - 1, col + 1):
-                if self.in_bounds((row - 1, attack_col)):
-                    piece = self.grid[row - 1][attack_col]
+                if self.in_bounds((row + 1, attack_col)):
+                    piece = self.grid[row + 1][attack_col]
                     if piece is not None and piece.color == 'white' and piece.__class__.__name__ == 'Pawn':
                         return True
         else:
             for attack_col in (col - 1, col + 1):
-                if self.in_bounds((row + 1, attack_col)):
-                    piece = self.grid[row + 1][attack_col]
+                if self.in_bounds((row - 1, attack_col)):
+                    piece = self.grid[row - 1][attack_col]
                     if piece is not None and piece.color == 'black' and piece.__class__.__name__ == 'Pawn':
                         return True
     
