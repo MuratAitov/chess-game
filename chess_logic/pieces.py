@@ -72,18 +72,18 @@ class Pawn(Piece):
     def get_legal_moves(self, board):
         moves = []
         row, col = self.position
-        direction = -1 if self.color == 'white' else 1
+        direction = 1 if self.color == 'white' else -1
 
         forward_row = row + direction
         if board.in_bounds((forward_row, col)) and board.get_piece((forward_row, col)) is None:
             moves.append((forward_row, col))
 
-            if self.color == 'white' and row == 6:
+            if self.color == 'white' and row == 1:
                 two_step_row = row + 2 * direction
                 if (board.get_piece((two_step_row, col)) is None and
                         board.in_bounds((two_step_row, col))):
                     moves.append((two_step_row, col))
-            elif self.color == 'black' and row == 1:
+            elif self.color == 'black' and row == 6:
                 two_step_row = row + 2 * direction
                 if (board.get_piece((two_step_row, col)) is None and
                         board.in_bounds((two_step_row, col))):
