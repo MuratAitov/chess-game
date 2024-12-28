@@ -194,7 +194,7 @@ class Board:
                     # Если позиция короля в списке возможных ходов - это шах
                     if king_pos in legal_moves:
                         return True
-                
+
         return False
 
     def is_checkmate(self, color: str) -> bool:
@@ -325,5 +325,5 @@ class Board:
     
 if __name__ == '__main__':
     board = Board()
-    board.place_test_pieces()
-    print(board.highlight_moves(Rook('white', (0, 0))))
+    board.setup_initial_position()
+    print(board)

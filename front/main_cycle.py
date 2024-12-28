@@ -14,7 +14,7 @@ while running:
         if event.type == pygame.QUIT:
             start_running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
-            cur_pos = (cur_alpha, cur_num) = ((event.pos[0] - 51) // 76 + 1, (662 - event.pos[1]) // 76 + 1)
+            cur_pos = (cur_num, cur_alpha) = event.pos[0] // 100 + 1, (800 - event.pos[1]) // 100 + 1
             piece = board.grid[cur_alpha][cur_num]
             if (piece) and (cur_pos not in points_pos) and (piece.color == cur_color) and chosen_piece:
                 if not points_pos:
@@ -23,7 +23,7 @@ while running:
                 points_pos = moves.copy()
                 chosen_piece = piece
                 for i in moves:
-                    pygame.draw.circle(screen, (102, 102, 102), (i + 38, i + 38), 9)
+                    pygame.draw.circle(screen, (102, 102, 102), (i + 50, i + 50), 9)
             elif (cur_pos in points_pos) and (piece.color == cur_color):
                 board.move_piece(chosen_piece.position, cur_pos)
                 rendering()
