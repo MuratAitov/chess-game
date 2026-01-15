@@ -10,8 +10,18 @@ except ImportError:
 class Board:
     def __init__(self):
         self.grid = [[None for i in range(8)] for j in range(8)]
+        self.castling_rights = {
+            'white': {'K': True, 'Q': True},
+            'black': {'K': True, 'Q': True},
+        }
+        self.en_passant_target = None
     
     def setup_initial_position(self):
+        self.castling_rights = {
+            'white': {'K': True, 'Q': True},
+            'black': {'K': True, 'Q': True},
+        }
+        self.en_passant_target = None
         # Пешки
         for col in range(8):
             self.grid[6][col] = Pawn('black', (6, col))
@@ -79,32 +89,187 @@ class Board:
         if end_pos not in piece.get_legal_moves(self):
             return False
         
-        # Test if move would leave king in check
+        # Snapshot state for undo if move is illegal
         captured_piece = self.get_piece(end_pos)
         old_pos = piece.position
-        
-        # Make the move temporarily
+        prev_en_passant = self.en_passant_target
+        prev_castling = (
+            self.castling_rights['white']['K'],
+            self.castling_rights['white']['Q'],
+            self.castling_rights['black']['K'],
+            self.castling_rights['black']['Q'],
+        )
+        rook_move = None
+        en_passant_capture_pos = None
+        promoted_piece = None
+
+        # Handle en passant capture
+        if (piece.__class__.__name__ == 'Pawn' and
+            self.en_passant_target == end_pos and
+            captured_piece is None):
+            en_passant_capture_pos = (old_pos[0], end_pos[1])
+            captured_piece = self.get_piece(en_passant_capture_pos)
+            if captured_piece:
+                self.grid[en_passant_capture_pos[0]][en_passant_capture_pos[1]] = None
+
+        # Move piece
         self.grid[start_pos[0]][start_pos[1]] = None
-        self.grid[end_pos[0]][end_pos[1]] = piece
-        piece.position = end_pos
-        
-        # Check if our king is in check after this move
-        in_check = self.is_in_check(piece.color)
-        
-        # Restore the board
-        self.grid[old_pos[0]][old_pos[1]] = piece
-        piece.position = old_pos
-        self.grid[end_pos[0]][end_pos[1]] = captured_piece
-        
-        # Only allow the move if it doesn't put our king in check
-        if not in_check:
-            # Make the move for real
-            self.grid[start_pos[0]][start_pos[1]] = None
+
+        # Handle promotion
+        if piece.__class__.__name__ == 'Pawn' and end_pos[0] in (0, 7):
+            promoted_piece = Queen(piece.color, end_pos)
+            self.grid[end_pos[0]][end_pos[1]] = promoted_piece
+        else:
             self.grid[end_pos[0]][end_pos[1]] = piece
             piece.position = end_pos
-            return True
-        
-        return False
+
+        # Handle castling (king moves two squares)
+        if piece.__class__.__name__ == 'King' and abs(end_pos[1] - old_pos[1]) == 2:
+            row = old_pos[0]
+            if end_pos[1] == 6:
+                rook_start = (row, 7)
+                rook_end = (row, 5)
+            else:
+                rook_start = (row, 0)
+                rook_end = (row, 3)
+            rook_piece = self.get_piece(rook_start)
+            if rook_piece:
+                self.grid[rook_start[0]][rook_start[1]] = None
+                self.grid[rook_end[0]][rook_end[1]] = rook_piece
+                rook_piece.position = rook_end
+                rook_move = (rook_piece, rook_start, rook_end)
+
+        # Update castling rights
+        if piece.__class__.__name__ == 'King':
+            self.castling_rights[piece.color]['K'] = False
+            self.castling_rights[piece.color]['Q'] = False
+        elif piece.__class__.__name__ == 'Rook':
+            if piece.color == 'white':
+                if old_pos == (0, 0):
+                    self.castling_rights['white']['Q'] = False
+                elif old_pos == (0, 7):
+                    self.castling_rights['white']['K'] = False
+            else:
+                if old_pos == (7, 0):
+                    self.castling_rights['black']['Q'] = False
+                elif old_pos == (7, 7):
+                    self.castling_rights['black']['K'] = False
+
+        if captured_piece and captured_piece.__class__.__name__ == 'Rook':
+            if captured_piece.color == 'white':
+                if end_pos == (0, 0):
+                    self.castling_rights['white']['Q'] = False
+                elif end_pos == (0, 7):
+                    self.castling_rights['white']['K'] = False
+            else:
+                if end_pos == (7, 0):
+                    self.castling_rights['black']['Q'] = False
+                elif end_pos == (7, 7):
+                    self.castling_rights['black']['K'] = False
+
+        # Update en passant target
+        self.en_passant_target = None
+        if piece.__class__.__name__ == 'Pawn' and abs(end_pos[0] - old_pos[0]) == 2:
+            mid_row = (end_pos[0] + old_pos[0]) // 2
+            self.en_passant_target = (mid_row, end_pos[1])
+
+        # Check if our king is in check after this move
+        in_check = self.is_in_check(piece.color)
+
+        # Undo if illegal
+        if in_check:
+            if rook_move:
+                rook_piece, rook_start, rook_end = rook_move
+                self.grid[rook_end[0]][rook_end[1]] = None
+                self.grid[rook_start[0]][rook_start[1]] = rook_piece
+                rook_piece.position = rook_start
+
+            if promoted_piece:
+                self.grid[end_pos[0]][end_pos[1]] = None
+                self.grid[old_pos[0]][old_pos[1]] = piece
+                piece.position = old_pos
+            else:
+                self.grid[end_pos[0]][end_pos[1]] = None
+                self.grid[old_pos[0]][old_pos[1]] = piece
+                piece.position = old_pos
+
+            if en_passant_capture_pos and captured_piece:
+                self.grid[en_passant_capture_pos[0]][en_passant_capture_pos[1]] = captured_piece
+            else:
+                self.grid[end_pos[0]][end_pos[1]] = captured_piece
+
+            self.en_passant_target = prev_en_passant
+            self.castling_rights['white']['K'] = prev_castling[0]
+            self.castling_rights['white']['Q'] = prev_castling[1]
+            self.castling_rights['black']['K'] = prev_castling[2]
+            self.castling_rights['black']['Q'] = prev_castling[3]
+            return False
+
+        return True
+
+    def _apply_temporary_move(self, piece: Piece, start_pos: Tuple[int, int], end_pos: Tuple[int, int]):
+        captured_piece = self.get_piece(end_pos)
+        old_pos = piece.position
+        rook_move = None
+        en_passant_capture_pos = None
+        promoted_piece = None
+
+        if (piece.__class__.__name__ == 'Pawn' and
+            self.en_passant_target == end_pos and
+            captured_piece is None):
+            en_passant_capture_pos = (old_pos[0], end_pos[1])
+            captured_piece = self.get_piece(en_passant_capture_pos)
+            if captured_piece:
+                self.grid[en_passant_capture_pos[0]][en_passant_capture_pos[1]] = None
+
+        self.grid[start_pos[0]][start_pos[1]] = None
+
+        if piece.__class__.__name__ == 'Pawn' and end_pos[0] in (0, 7):
+            promoted_piece = Queen(piece.color, end_pos)
+            self.grid[end_pos[0]][end_pos[1]] = promoted_piece
+        else:
+            self.grid[end_pos[0]][end_pos[1]] = piece
+            piece.position = end_pos
+
+        if piece.__class__.__name__ == 'King' and abs(end_pos[1] - old_pos[1]) == 2:
+            row = old_pos[0]
+            if end_pos[1] == 6:
+                rook_start = (row, 7)
+                rook_end = (row, 5)
+            else:
+                rook_start = (row, 0)
+                rook_end = (row, 3)
+            rook_piece = self.get_piece(rook_start)
+            if rook_piece:
+                self.grid[rook_start[0]][rook_start[1]] = None
+                self.grid[rook_end[0]][rook_end[1]] = rook_piece
+                rook_piece.position = rook_end
+                rook_move = (rook_piece, rook_start, rook_end)
+
+        return (piece, captured_piece, old_pos, en_passant_capture_pos, rook_move, promoted_piece)
+
+    def _undo_temporary_move(self, end_pos: Tuple[int, int], state):
+        piece, captured_piece, old_pos, en_passant_capture_pos, rook_move, promoted_piece = state
+
+        if rook_move:
+            rook_piece, rook_start, rook_end = rook_move
+            self.grid[rook_end[0]][rook_end[1]] = None
+            self.grid[rook_start[0]][rook_start[1]] = rook_piece
+            rook_piece.position = rook_start
+
+        if promoted_piece:
+            self.grid[end_pos[0]][end_pos[1]] = None
+            self.grid[old_pos[0]][old_pos[1]] = piece
+            piece.position = old_pos
+        else:
+            self.grid[end_pos[0]][end_pos[1]] = None
+            self.grid[old_pos[0]][old_pos[1]] = piece
+            piece.position = old_pos
+
+        if en_passant_capture_pos and captured_piece:
+            self.grid[en_passant_capture_pos[0]][en_passant_capture_pos[1]] = captured_piece
+        else:
+            self.grid[end_pos[0]][end_pos[1]] = captured_piece
     
     def is_square_attacked(self, position: Tuple[int, int], by_color: str) -> bool:
         """
@@ -226,17 +391,7 @@ class Board:
         
         # Проверим, может ли какая-либо фигура противника атаковать короля
         opponent_color = 'black' if color == 'white' else 'white'
-        for row in range(8):
-            for col in range(8):
-                piece = self.get_piece((row, col))
-                if piece and piece.color == opponent_color:
-                    # Получаем все возможные ходы фигуры
-                    legal_moves = piece.get_legal_moves(self)
-                    # Если позиция короля в списке возможных ходов - это шах
-                    if king_pos in legal_moves:
-                        return True
-
-        return False
+        return self.is_square_attacked(king_pos, opponent_color)
 
     def is_checkmate(self, color: str) -> bool:
         """
@@ -262,22 +417,15 @@ class Board:
                     
                     # Проверяем каждый возможный ход
                     for move in legal_moves:
-                        # Сохраняем текущее состояние
-                        captured_piece = self.get_piece(move)
+                        # Сохраняем текущее состояние                        
                         old_pos = piece.position
+                        state = self._apply_temporary_move(piece, old_pos, move)
                         
-                        # Пробуем сделать ход
-                        self.grid[old_pos[0]][old_pos[1]] = None
-                        self.grid[move[0]][move[1]] = piece
-                        piece.position = move
-                        
-                        # Проверяем, остается ли король под шахом
+                        # DY??D_D?D?????D?D?, D_???,D?D??,???? D?D, D?D_??D_D??O D?D_D' ?^D??.D_D?
                         still_in_check = self.is_in_check(color)
                         
-                        # Возвращаем всё как было
-                        self.grid[old_pos[0]][old_pos[1]] = piece
-                        piece.position = old_pos
-                        self.grid[move[0]][move[1]] = captured_piece
+                        # D'D_D?D???D??%D?D?D? D????` D?D?D? D??<D?D_
+                        self._undo_temporary_move(move, state)
                         
                         # Если нашелся ход, спасающий от шаха - это не мат
                         if not still_in_check:
@@ -309,22 +457,15 @@ class Board:
                     
                     # Проверяем каждый возможный ход
                     for move in legal_moves:
-                        # Сохраняем текущее состояние
-                        captured_piece = self.get_piece(move)
+                        # Сохраняем текущее состояние                        
                         old_pos = piece.position
+                        state = self._apply_temporary_move(piece, old_pos, move)
                         
-                        # Пробуем сделать ход
-                        self.grid[old_pos[0]][old_pos[1]] = None
-                        self.grid[move[0]][move[1]] = piece
-                        piece.position = move
-                        
-                        # Проверяем, не подставляет ли ход короля под шах
+                        # DY??D_D?D?????D?D?, D_???,D?D??,???? D?D, D?D_??D_D??O D?D_D' ?^D??.D_D?
                         legal_move = not self.is_in_check(color)
                         
-                        # Возвращаем всё как было
-                        self.grid[old_pos[0]][old_pos[1]] = piece
-                        piece.position = old_pos
-                        self.grid[move[0]][move[1]] = captured_piece
+                        # D'D_D?D???D??%D?D?D? D????` D?D?D? D??<D?D_
+                        self._undo_temporary_move(move, state)
                         
                         # Если нашелся хотя бы один легальный ход - это не пат
                         if legal_move:
@@ -348,21 +489,14 @@ class Board:
                     
                     for move in piece_moves:
                         # Test if this move is actually legal (doesn't put king in check)
-                        captured_piece = self.get_piece(move)
                         old_pos = piece.position
-                        
-                        # Make move temporarily
-                        self.grid[old_pos[0]][old_pos[1]] = None
-                        self.grid[move[0]][move[1]] = piece
-                        piece.position = move
+                        state = self._apply_temporary_move(piece, old_pos, move)
                         
                         # Check if king is in check
                         legal = not self.is_in_check(color)
                         
                         # Restore board
-                        self.grid[old_pos[0]][old_pos[1]] = piece
-                        piece.position = old_pos
-                        self.grid[move[0]][move[1]] = captured_piece
+                        self._undo_temporary_move(move, state)
                         
                         if legal:
                             legal_moves.append((old_pos, move))

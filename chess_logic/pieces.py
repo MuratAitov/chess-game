@@ -96,6 +96,16 @@ class Pawn(Piece):
                 if target_piece is not None and target_piece.color != self.color:
                     moves.append(attack_pos)
 
+        if getattr(board, 'en_passant_target', None):
+            for attack_moves_col in [col - 1, col + 1]:
+                attack_pos = (row + direction, attack_moves_col)
+                if attack_pos == board.en_passant_target:
+                    side_pawn = board.get_piece((row, attack_moves_col))
+                    if (side_pawn and
+                        side_pawn.color != self.color and
+                        side_pawn.__class__.__name__ == 'Pawn'):
+                        moves.append(attack_pos)
+
         return moves
 
 
@@ -221,6 +231,31 @@ class King(Piece):
                 target_piece = board.get_piece((r, c))
                 if target_piece is None or target_piece.color != self.color:
                     moves.append((r, c))
+
+        if getattr(board, 'castling_rights', None):
+            if not board.is_in_check(self.color):
+                row = 0 if self.color == 'white' else 7
+                if self.position == (row, 4):
+                    opponent_color = 'black' if self.color == 'white' else 'white'
+                    # King-side castling
+                    if board.castling_rights[self.color]['K']:
+                        if (board.get_piece((row, 5)) is None and
+                            board.get_piece((row, 6)) is None):
+                            rook = board.get_piece((row, 7))
+                            if rook and rook.color == self.color and rook.__class__.__name__ == 'Rook':
+                                if (not board.is_square_attacked((row, 5), opponent_color) and
+                                    not board.is_square_attacked((row, 6), opponent_color)):
+                                    moves.append((row, 6))
+                    # Queen-side castling
+                    if board.castling_rights[self.color]['Q']:
+                        if (board.get_piece((row, 1)) is None and
+                            board.get_piece((row, 2)) is None and
+                            board.get_piece((row, 3)) is None):
+                            rook = board.get_piece((row, 0))
+                            if rook and rook.color == self.color and rook.__class__.__name__ == 'Rook':
+                                if (not board.is_square_attacked((row, 3), opponent_color) and
+                                    not board.is_square_attacked((row, 2), opponent_color)):
+                                    moves.append((row, 2))
 
         return moves
 
