@@ -56,6 +56,8 @@ class Board:
         # Короли
         self.grid[7][4] = King('black', (7, 4))
         self.grid[0][4] = King('white', (0, 4))
+        self.record_position('white')
+
     def place_test_pieces(self, piece: Piece, position: Tuple[int, int]):
         """
         Ставит указанную фигуру на заданные координаты.
@@ -77,7 +79,7 @@ class Board:
         row, col = pos
         return self.grid[row][col]
     
-    def move_piece(self, start_pos: Tuple[int, int], end_pos: Tuple[int, int]) -> bool:
+    def move_piece(self, start_pos: Tuple[int, int], end_pos: Tuple[int, int], promotion: Optional[str] = None, next_color: Optional[str] = None) -> bool:
         """
         Move a piece from start_pos to end_pos if the move is legal.
         A move is legal if:
@@ -121,7 +123,7 @@ class Board:
 
         # Handle promotion
         if piece.__class__.__name__ == 'Pawn' and end_pos[0] in (0, 7):
-            promoted_piece = Queen(piece.color, end_pos)
+            promoted_piece = self._create_promotion_piece(piece.color, end_pos, promotion)
             self.grid[end_pos[0]][end_pos[1]] = promoted_piece
         else:
             self.grid[end_pos[0]][end_pos[1]] = piece
@@ -209,9 +211,112 @@ class Board:
             self.castling_rights['black']['Q'] = prev_castling[3]
             return False
 
+        is_capture = captured_piece is not None
+        is_pawn_move = piece.__class__.__name__ == 'Pawn'
+        if is_capture or is_pawn_move:
+            self.halfmove_clock = 0
+        else:
+            self.halfmove_clock += 1
+
+        if next_color:
+            self.record_position(next_color)
+
         return True
 
-    def _apply_temporary_move(self, piece: Piece, start_pos: Tuple[int, int], end_pos: Tuple[int, int]):
+    def _create_promotion_piece(self, color: str, position: Tuple[int, int], promotion: Optional[str]):
+        promo = (promotion or 'q').lower()
+        if promo == 'r':
+            return Rook(color, position)
+        if promo == 'b':
+            return Bishop(color, position)
+        if promo == 'n':
+            return Knight(color, position)
+        return Queen(color, position)
+
+    def get_position_key(self, side_to_move: str) -> str:
+        rows = []
+        for row in range(7, -1, -1):
+            empty = 0
+            row_parts = []
+            for col in range(8):
+                piece = self.get_piece((row, col))
+                if not piece:
+                    empty += 1
+                else:
+                    if empty:
+                        row_parts.append(str(empty))
+                        empty = 0
+                    name = piece.__class__.__name__
+                    letter = {
+                        'Pawn': 'p',
+                        'Knight': 'n',
+                        'Bishop': 'b',
+                        'Rook': 'r',
+                        'Queen': 'q',
+                        'King': 'k',
+                    }[name]
+                    if piece.color == 'white':
+                        letter = letter.upper()
+                    row_parts.append(letter)
+            if empty:
+                row_parts.append(str(empty))
+            rows.append(''.join(row_parts))
+
+        castling = ''
+        if self.castling_rights['white']['K']:
+            castling += 'K'
+        if self.castling_rights['white']['Q']:
+            castling += 'Q'
+        if self.castling_rights['black']['K']:
+            castling += 'k'
+        if self.castling_rights['black']['Q']:
+            castling += 'q'
+        if not castling:
+            castling = '-'
+
+        if self.en_passant_target:
+            ep_file = chr(ord('a') + self.en_passant_target[1])
+            ep_rank = str(self.en_passant_target[0] + 1)
+            ep = ep_file + ep_rank
+        else:
+            ep = '-'
+
+        side = 'w' if side_to_move == 'white' else 'b'
+        return f\"{'/'.join(rows)} {side} {castling} {ep}\"
+
+    def record_position(self, side_to_move: str):
+        key = self.get_position_key(side_to_move)
+        self.repetition_counts[key] = self.repetition_counts.get(key, 0) + 1
+
+    def is_threefold_repetition(self, side_to_move: str) -> bool:
+        key = self.get_position_key(side_to_move)
+        return self.repetition_counts.get(key, 0) >= 3
+
+    def is_insufficient_material(self) -> bool:
+        pieces = []
+        bishops = []
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece((row, col))
+                if piece:
+                    pieces.append(piece)
+                    if piece.__class__.__name__ == 'Bishop':
+                        bishops.append((piece.color, (row + col) % 2))
+
+        non_kings = [p for p in pieces if p.__class__.__name__ != 'King']
+        if not non_kings:
+            return True
+        if len(non_kings) == 1:
+            return non_kings[0].__class__.__name__ in ('Bishop', 'Knight')
+        if len(non_kings) == 2:
+            if all(p.__class__.__name__ == 'Knight' for p in non_kings):
+                return True
+            if all(p.__class__.__name__ == 'Bishop' for p in non_kings):
+                same_color = bishops[0][1] == bishops[1][1] and bishops[0][0] != bishops[1][0]
+                return same_color
+        return False
+
+    def _apply_temporary_move(self, piece: Piece, start_pos: Tuple[int, int], end_pos: Tuple[int, int], promotion: Optional[str] = None):
         captured_piece = self.get_piece(end_pos)
         old_pos = piece.position
         rook_move = None
@@ -229,7 +334,7 @@ class Board:
         self.grid[start_pos[0]][start_pos[1]] = None
 
         if piece.__class__.__name__ == 'Pawn' and end_pos[0] in (0, 7):
-            promoted_piece = Queen(piece.color, end_pos)
+            promoted_piece = self._create_promotion_piece(piece.color, end_pos, promotion)
             self.grid[end_pos[0]][end_pos[1]] = promoted_piece
         else:
             self.grid[end_pos[0]][end_pos[1]] = piece
@@ -396,88 +501,33 @@ class Board:
         # Проверим, может ли какая-либо фигура противника атаковать короля
         opponent_color = 'black' if color == 'white' else 'white'
         return self.is_square_attacked(king_pos, opponent_color)
-
     def is_checkmate(self, color: str) -> bool:
         """
-        Проверяет, находится ли указанный цвет в положении мата.
+        DY??D_D?D?????D??,, D?D??.D_D'D,?,???? D?D, ??D?D?D?D?D?D??<D1 ?+D?D??, D? D?D_D?D_DD?D?D,D, D?D??,D?.
         
         Args:
-            color (str): цвет игрока ('white' или 'black')
+            color (str): ?+D?D??, D,D3??D_D?D? ('white' D,D?D, 'black')
             
         Returns:
-            bool: True если это мат, False в противном случае
+            bool: True D???D?D, ???,D_ D?D??,, False D? D???D_?,D,D?D?D_D? ??D?????D?D?
         """
-        # Если нет шаха, то нет и мата
         if not self.is_in_check(color):
             return False
-        
-        # Проверяем все фигуры указанного цвета
-        for row in range(8):
-            for col in range(8):
-                piece = self.get_piece((row, col))
-                if piece and piece.color == color:
-                    # Получаем все возможные ходы фигуры
-                    legal_moves = piece.get_legal_moves(self)
-                    
-                    # Проверяем каждый возможный ход
-                    for move in legal_moves:
-                        # Сохраняем текущее состояние                        
-                        old_pos = piece.position
-                        state = self._apply_temporary_move(piece, old_pos, move)
-                        
-                        # DY??D_D?D?????D?D?, D_???,D?D??,???? D?D, D?D_??D_D??O D?D_D' ?^D??.D_D?
-                        still_in_check = self.is_in_check(color)
-                        
-                        # D'D_D?D???D??%D?D?D? D????` D?D?D? D??<D?D_
-                        self._undo_temporary_move(move, state)
-                        
-                        # Если нашелся ход, спасающий от шаха - это не мат
-                        if not still_in_check:
-                            return False
-                            
-        # Если не нашлось ходов, спасающих от шаха - это мат
-        return True
-
+        return len(self.get_legal_moves_for_color_with_promotions(color)) == 0
     def is_stalemate(self, color: str) -> bool:
         """
-        Проверяет, находится ли указанный цвет в положении пата.
+        DY??D_D?D?????D??,, D?D??.D_D'D,?,???? D?D, ??D?D?D?D?D?D??<D1 ?+D?D??, D? D?D_D?D_DD?D?D,D, D?D??,D?.
         
         Args:
-            color (str): цвет игрока ('white' или 'black')
+            color (str): ?+D?D??, D,D3??D_D?D? ('white' D,D?D, 'black')
             
         Returns:
-            bool: True если это пат, False в противном случае
+            bool: True D???D?D, ???,D_ D?D??,, False D? D???D_?,D,D?D?D_D? ??D?????D?D?
         """
-        # Если есть шах, то это не пат
         if self.is_in_check(color):
             return False
-        
-        # Проверяем, есть ли хоть один легальный ход
-        for row in range(8):
-            for col in range(8):
-                piece = self.get_piece((row, col))
-                if piece and piece.color == color:
-                    legal_moves = piece.get_legal_moves(self)
-                    
-                    # Проверяем каждый возможный ход
-                    for move in legal_moves:
-                        # Сохраняем текущее состояние                        
-                        old_pos = piece.position
-                        state = self._apply_temporary_move(piece, old_pos, move)
-                        
-                        # DY??D_D?D?????D?D?, D_???,D?D??,???? D?D, D?D_??D_D??O D?D_D' ?^D??.D_D?
-                        legal_move = not self.is_in_check(color)
-                        
-                        # D'D_D?D???D??%D?D?D? D????` D?D?D? D??<D?D_
-                        self._undo_temporary_move(move, state)
-                        
-                        # Если нашелся хотя бы один легальный ход - это не пат
-                        if legal_move:
-                            return False
-                            
-        # Если не нашлось ни одного легального хода - это пат
-        return True
-    
+        return len(self.get_legal_moves_for_color_with_promotions(color)) == 0
+
     def get_legal_moves_for_color(self, color: str) -> List[Tuple[Tuple[int, int], Tuple[int, int]]]:
         """
         Get all legal moves for a given color (moves that don't put own king in check).
@@ -506,19 +556,57 @@ class Board:
                             legal_moves.append((old_pos, move))
         
         return legal_moves
+
+    def get_legal_moves_for_color_with_promotions(self, color: str) -> List[Tuple[Tuple[int, int], Tuple[int, int], Optional[str]]]:
+        """
+        Get all legal moves for a given color, including promotion choices.
+        Returns list of (start_pos, end_pos, promotion) where promotion is one of q/r/b/n or None.
+        """
+        legal_moves = []
+        promotion_choices = ['q', 'r', 'b', 'n']
+
+        for row in range(8):
+            for col in range(8):
+                piece = self.get_piece((row, col))
+                if piece and piece.color == color:
+                    piece_moves = piece.get_legal_moves(self)
+
+                    for move in piece_moves:
+                        promos = [None]
+                        if piece.__class__.__name__ == 'Pawn' and move[0] in (0, 7):
+                            promos = promotion_choices
+
+                        for promo in promos:
+                            old_pos = piece.position
+                            state = self._apply_temporary_move(piece, old_pos, move, promo)
+                            legal = not self.is_in_check(color)
+                            self._undo_temporary_move(move, state)
+
+                            if legal:
+                                legal_moves.append((old_pos, move, promo))
+
+        return legal_moves
     
     def is_game_over(self, color: str) -> Tuple[bool, str]:
         """
         Check if the game is over for the given color.
         Returns (is_over, reason) where reason is 'checkmate', 'stalemate', or ''
         """
-        legal_moves = self.get_legal_moves_for_color(color)
+        if self.is_insufficient_material():
+            return True, 'draw'
+
+        legal_moves = self.get_legal_moves_for_color_with_promotions(color)
         
         if not legal_moves:  # No legal moves
             if self.is_in_check(color):
                 return True, 'checkmate'
             else:
                 return True, 'stalemate'
+
+        if self.halfmove_clock >= 100:
+            return True, 'draw'
+        if self.is_threefold_repetition(color):
+            return True, 'draw'
         
         return False, ''
     

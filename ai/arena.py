@@ -22,10 +22,13 @@ def uci_to_pos(uci: str) -> Tuple[int, int]:
 
 
 def move_to_uci(move: Tuple[Tuple[int, int], Tuple[int, int]], board: Board) -> str:
-    start_pos, end_pos = move
+    start_pos, end_pos = move[0], move[1]
+    promo = move[2] if len(move) > 2 else None
     piece = board.get_piece(start_pos)
     uci = pos_to_uci(start_pos) + pos_to_uci(end_pos)
-    if piece and piece.__class__.__name__ == 'Pawn' and end_pos[0] in (0, 7):
+    if promo:
+        uci += promo
+    elif piece and piece.__class__.__name__ == 'Pawn' and end_pos[0] in (0, 7):
         uci += 'q'
     return uci
 
@@ -105,7 +108,9 @@ def play_game(engine: ChessEngine, stockfish: UciEngine, engine_color: str, move
                     return 0.0
                 return 0.5
             uci = move_to_uci(move, board)
-            if not board.move_piece(move[0], move[1]):
+            next_color = 'black' if cur_color == 'white' else 'white'
+            promo = move[2] if len(move) > 2 else None
+            if not board.move_piece(move[0], move[1], promotion=promo, next_color=next_color):
                 return 0.0
             moves_uci.append(uci)
         else:
@@ -116,7 +121,8 @@ def play_game(engine: ChessEngine, stockfish: UciEngine, engine_color: str, move
                     return 1.0
                 return 0.5
             start, end, _promo = uci_to_move(best)
-            if not board.move_piece(start, end):
+            next_color = 'black' if cur_color == 'white' else 'white'
+            if not board.move_piece(start, end, promotion=_promo, next_color=next_color):
                 return 1.0
             moves_uci.append(best)
 

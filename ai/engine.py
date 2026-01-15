@@ -14,7 +14,7 @@ if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
 from chess_logic.board import Board
-from chess_logic.pieces import Pawn, Queen
+from chess_logic.pieces import Pawn, Queen, Rook, Bishop, Knight
 from ai.evaluator import ChessEvaluator
 
 
@@ -28,7 +28,7 @@ class TTEntry:
     depth: int
     score: float
     flag: int
-    best_move: Optional[Tuple[Tuple[int, int], Tuple[int, int]]]
+    best_move: Optional[Tuple[Tuple[int, int], Tuple[int, int], Optional[str]]]
 
 
 class ChessEngine:
@@ -110,8 +110,8 @@ class ChessEngine:
     def _piece_value(self, piece) -> int:
         return self.evaluator.PIECE_VALUES.get(piece.__class__.__name__, 0)
 
-    def _is_capture(self, board: Board, move: Tuple[Tuple[int, int], Tuple[int, int]]) -> bool:
-        start_pos, end_pos = move
+    def _is_capture(self, board: Board, move) -> bool:
+        start_pos, end_pos = move[0], move[1]
         captured_piece = board.get_piece(end_pos)
         if captured_piece is not None:
             return True
@@ -125,7 +125,7 @@ class ChessEngine:
         def score_move(move):
             if tt_best and move == tt_best:
                 return 1000000
-            start_pos, end_pos = move
+            start_pos, end_pos = move[0], move[1]
             piece = board.get_piece(start_pos)
             captured = board.get_piece(end_pos)
             score = 0
@@ -147,7 +147,8 @@ class ChessEngine:
         return base_eval if color == 'black' else -base_eval
 
     def _make_move(self, board: Board, move, color: str):
-        start_pos, end_pos = move
+        start_pos, end_pos = move[0], move[1]
+        promotion = move[2] if len(move) > 2 else None
         piece = board.get_piece(start_pos)
         captured_piece = board.get_piece(end_pos)
         old_pos = piece.position
@@ -175,7 +176,15 @@ class ChessEngine:
         board.grid[start_pos[0]][start_pos[1]] = None
 
         if piece.__class__.__name__ == 'Pawn' and end_pos[0] in (0, 7):
-            promoted_piece = Queen(piece.color, end_pos)
+            promo = (promotion or 'q').lower()
+            if promo == 'r':
+                promoted_piece = Rook(piece.color, end_pos)
+            elif promo == 'b':
+                promoted_piece = Bishop(piece.color, end_pos)
+            elif promo == 'n':
+                promoted_piece = Knight(piece.color, end_pos)
+            else:
+                promoted_piece = Queen(piece.color, end_pos)
             board.grid[end_pos[0]][end_pos[1]] = promoted_piece
         else:
             board.grid[end_pos[0]][end_pos[1]] = piece
@@ -240,7 +249,7 @@ class ChessEngine:
         )
 
     def _undo_move(self, board: Board, move, state):
-        start_pos, end_pos = move
+        start_pos, end_pos = move[0], move[1]
         (
             piece,
             captured_piece,
@@ -284,7 +293,10 @@ class ChessEngine:
         self.time_up = False
         self.stop_time = time.time() + time_limit if time_limit else None
 
-        legal_moves = board.get_legal_moves_for_color(color)
+        if hasattr(board, 'get_legal_moves_for_color_with_promotions'):
+            legal_moves = board.get_legal_moves_for_color_with_promotions(color)
+        else:
+            legal_moves = board.get_legal_moves_for_color(color)
         if not legal_moves:
             return None
 
@@ -324,7 +336,10 @@ class ChessEngine:
         if depth == 0:
             return self._quiescence(board, alpha, beta, color, ply)
 
-        legal_moves = board.get_legal_moves_for_color(color)
+        if hasattr(board, 'get_legal_moves_for_color_with_promotions'):
+            legal_moves = board.get_legal_moves_for_color_with_promotions(color)
+        else:
+            legal_moves = board.get_legal_moves_for_color(color)
         if not legal_moves:
             if board.is_in_check(color):
                 return -self.MATE_SCORE + ply
@@ -378,7 +393,10 @@ class ChessEngine:
         if stand_pat > alpha:
             alpha = stand_pat
 
-        legal_moves = board.get_legal_moves_for_color(color)
+        if hasattr(board, 'get_legal_moves_for_color_with_promotions'):
+            legal_moves = board.get_legal_moves_for_color_with_promotions(color)
+        else:
+            legal_moves = board.get_legal_moves_for_color(color)
         capture_moves = [m for m in legal_moves if self._is_capture(board, m)]
         if not capture_moves:
             return alpha

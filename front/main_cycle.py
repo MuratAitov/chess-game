@@ -28,6 +28,7 @@ ai_thinking = False
 # Difficulty settings
 difficulty_names = {1: "Легкий", 2: "Средний", 3: "Тяжелый", 4: "Эксперт"}
 difficulty_depths = {1: 2, 2: 3, 3: 4, 4: 5}
+promotion_choice = 'q'
 
 while running:
     for event in pygame.event.get():
@@ -64,6 +65,18 @@ while running:
                 ai_difficulty = 4
                 ai_engine = ChessEngine(depth=difficulty_depths[ai_difficulty])
                 print(f"Уровень сложности: {difficulty_names[ai_difficulty]}")
+            elif event.key == pygame.K_q:
+                promotion_choice = 'q'
+                print("Promotion set to Queen (Q)")
+            elif event.key == pygame.K_w:
+                promotion_choice = 'r'
+                print("Promotion set to Rook (W)")
+            elif event.key == pygame.K_e:
+                promotion_choice = 'b'
+                print("Promotion set to Bishop (E)")
+            elif event.key == pygame.K_n:
+                promotion_choice = 'n'
+                print("Promotion set to Knight (N)")
         elif event.type == pygame.MOUSEBUTTONDOWN and not ai_thinking:
             # Fix coordinate calculation - convert to 0-based coordinates
             mouse_x, mouse_y = event.pos
@@ -98,9 +111,13 @@ while running:
                 # If clicking on a valid move destination
                 elif chosen_piece and cur_pos in points_pos:
                     # Make the move
-                    if board.move_piece(chosen_piece.position, cur_pos):
+                    next_color = 'black' if cur_color == 'white' else 'white'
+                    promo = None
+                    if chosen_piece.__class__.__name__ == 'Pawn' and cur_pos[0] in (0, 7):
+                        promo = promotion_choice
+                    if board.move_piece(chosen_piece.position, cur_pos, promotion=promo, next_color=next_color):
                         # Switch turns
-                        cur_color = 'black' if cur_color == 'white' else 'white'
+                        cur_color = next_color
                         
                         # Check for game over conditions
                         game_over, reason = board.is_game_over(cur_color)
@@ -110,6 +127,8 @@ while running:
                                 print(f"Checkmate! {winner} wins!")
                             elif reason == 'stalemate':
                                 print("Stalemate! It's a draw!")
+                            elif reason == 'draw':
+                                print("Draw by rule.")
                     # Clear selection
                     points_pos = []
                     chosen_piece = None
@@ -130,12 +149,17 @@ while running:
         ai_move = ai_engine.get_best_move(board, ai_color)
         
         if ai_move:
-            start_pos, end_pos = ai_move
+            if len(ai_move) == 2:
+                start_pos, end_pos = ai_move
+                promo = None
+            else:
+                start_pos, end_pos, promo = ai_move
             print(f"AI moves: {start_pos} -> {end_pos}")
             
-            if board.move_piece(start_pos, end_pos):
+            next_color = 'black' if cur_color == 'white' else 'white'
+            if board.move_piece(start_pos, end_pos, promotion=promo, next_color=next_color):
                 # Switch turns back to human
-                cur_color = 'black' if cur_color == 'white' else 'white'
+                cur_color = next_color
                 
                 # Check for game over conditions
                 game_over, reason = board.is_game_over(cur_color)
@@ -145,6 +169,8 @@ while running:
                         print(f"Checkmate! {winner} wins!")
                     elif reason == 'stalemate':
                         print("Stalemate! It's a draw!")
+                    elif reason == 'draw':
+                        print("Draw by rule.")
                 
                 rendering()
             else:
