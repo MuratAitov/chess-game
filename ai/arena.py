@@ -1,6 +1,5 @@
 import argparse
 import math
-import random
 import subprocess
 import time
 from typing import List, Tuple, Optional

@@ -78,27 +78,10 @@ while running:
                 # If clicking on a piece of the current player and no piece is selected
                 if piece and piece.color == cur_color and not chosen_piece:
                     # Get only truly legal moves (not putting king in check)
-                    basic_moves = piece.get_legal_moves(board)
-                    legal_moves = []
-                    
-                    for move in basic_moves:
-                        # Test if move is legal
-                        captured_piece = board.get_piece(move)
-                        old_pos = piece.position
-                        
-                        # Make move temporarily
-                        board.grid[old_pos[0]][old_pos[1]] = None
-                        board.grid[move[0]][move[1]] = piece
-                        piece.position = move
-                        
-                        # Check if king is in check
-                        if not board.is_in_check(piece.color):
-                            legal_moves.append(move)
-                        
-                        # Restore board
-                        board.grid[old_pos[0]][old_pos[1]] = piece
-                        piece.position = old_pos
-                        board.grid[move[0]][move[1]] = captured_piece
+                    legal_moves = [
+                        end for start, end in board.get_legal_moves_for_color(cur_color)
+                        if start == piece.position
+                    ]
                     
                     if legal_moves:  # Only select if piece has legal moves
                         points_pos = legal_moves.copy()

@@ -15,6 +15,10 @@ class Board:
             'black': {'K': True, 'Q': True},
         }
         self.en_passant_target = None
+        self.halfmove_clock = 0
+        self.repetition_counts = {}
+        self.halfmove_clock = 0
+        self.repetition_counts = {}
     
     def setup_initial_position(self):
         self.castling_rights = {

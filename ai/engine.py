@@ -133,7 +133,7 @@ class ChessEngine:
                 score += 10000 + self._piece_value(captured) - self._piece_value(piece)
             if piece and piece.__class__.__name__ == 'Pawn' and end_pos[0] in (0, 7):
                 score += 8000
-            if self.killer_moves and move in self.killer_moves[ply]:
+            if self.killer_moves and ply < len(self.killer_moves) and move in self.killer_moves[ply]:
                 score += 7000
             score += self.history.get(move, 0)
             return score
@@ -288,7 +288,7 @@ class ChessEngine:
         if not legal_moves:
             return None
 
-        best_move = None
+        best_move = legal_moves[0]
 
         for current_depth in range(1, self.depth + 1):
             self.killer_moves = [[None, None] for _ in range(current_depth + 2)]
@@ -350,10 +350,11 @@ class ChessEngine:
                 best_move = move
                 if alpha >= beta:
                     if not self._is_capture(board, move):
-                        killers = self.killer_moves[ply]
-                        if move != killers[0]:
-                            killers[1] = killers[0]
-                            killers[0] = move
+                        if ply < len(self.killer_moves):
+                            killers = self.killer_moves[ply]
+                            if move != killers[0]:
+                                killers[1] = killers[0]
+                                killers[0] = move
                         self.history[move] = self.history.get(move, 0) + depth * depth
                     break
 
